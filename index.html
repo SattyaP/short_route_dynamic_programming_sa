@@ -6,20 +6,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Visualisasi Rute Terpendek - Dynamic Programming</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
         body {
-            display: flex;
-            gap: 20px;
+            height: 100%;
+            margin: 0;
             background: #111;
             color: #eee;
             font-family: 'Segoe UI', sans-serif;
         }
 
+        .app {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            height: calc(100vh - 80px);
+            padding: 20px;
+            align-items: stretch;
+        }
+
+        .left {
+            width: 700px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .controls {
+            text-align: center;
+        }
+
         #peta {
             position: relative;
-            width: 600px;
-            height: 400px;
+            flex: 1;
             background: #222;
             border-radius: 10px;
+            overflow: hidden;
+            min-height: 480px;
+        }
+
+        #log {
+            flex: 1;
+            background: #1a1a1a;
+            border-radius: 10px;
+            padding: 15px;
+            overflow-y: auto;
+            font-size: 14px;
         }
 
         .node {
@@ -34,12 +69,13 @@
             color: white;
             font-weight: bold;
             transition: background 0.3s;
+            z-index: 99999999;
         }
 
         .label-nama {
             position: absolute;
             text-align: center;
-            width: 100px;
+            width: 120px;
             transform: translate(-30%, 50px);
             color: #fff;
             font-size: 14px;
@@ -56,20 +92,10 @@
         .jarak {
             position: absolute;
             color: #fff;
-            font-size: 14px;
+            font-size: 13px;
             background: rgba(0, 0, 0, 0.5);
             padding: 2px 4px;
             border-radius: 4px;
-        }
-
-        #log {
-            flex: 1;
-            background: #1a1a1a;
-            border-radius: 10px;
-            padding: 15px;
-            overflow-y: auto;
-            height: 400px;
-            font-size: 14px;
         }
 
         .aktif {
@@ -93,35 +119,56 @@
         button:hover {
             background: #0056b3;
         }
+
+        h3 {
+            margin: 8px 0 0 0;
+            font-size: 16px;
+            line-height: 1.2;
+            color: #eee;
+        }
+
+        #log b {
+            color: #ffd;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #333;
+            margin: 8px 0;
+        }
     </style>
 </head>
 
-<body style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column;">
+<body>
+    <div style="margin-top: 24px; text-align: center;">
+        <button onclick="mulaiPerhitungan()">▶ Mulai Perhitungan</button>
+        <h3>Implementasi Algoritma Dynamic Programming untuk Optimasi Pencarian Rute Terpendek pada Sistem
+            Distribusi Supplier di Perusahaan XYZ</h3>
+    </divs>
+    <div class="app">
+        <div class="left">
 
-    <div style="display: flex; flex-direction: column; text-align: center;">
-        <div>
-            <button onclick="mulaiPerhitungan()">▶ Mulai Perhitungan</button>
-            <h3>Implementasi Algoritma Dynamic Programming untuk Optimasi Pencarian Rute Terpendek pada Sistem
-                Distribusi Supplier di Perusahaan XYZ</h3>
             <div id="peta"></div>
         </div>
 
-        <div style="margin-top: 24px;" id="log"></div>
+        <div id="log"></div>
     </div>
 
     <script>
-        const lokasi = ["Supplier", "Gudang A", "Gudang B", "Gudang C"];
+        const lokasi = ["Supplier", "Gudang A", "Gudang B", "Gudang C", "Gudang D"];
         const koordinat = [
             { x: 100, y: 200 },
             { x: 300, y: 80 },
             { x: 500, y: 150 },
             { x: 350, y: 300 },
+            { x: 150, y: 350 }
         ];
         const jarakAntarLokasi = [
-            [0, 10, 15, 20],
-            [10, 0, 35, 25],
-            [15, 35, 0, 30],
-            [20, 25, 30, 0],
+            [0, 10, 15, 20, 18],
+            [10, 0, 35, 25, 17],
+            [15, 35, 0, 30, 20],
+            [20, 25, 30, 0, 24],
+            [18, 17, 20, 24, 0]
         ];
 
         const peta = document.getElementById("peta");
@@ -129,6 +176,9 @@
         let garisElemen = [];
 
         function buatPeta() {
+            peta.innerHTML = "";
+            garisElemen = [];
+
             lokasi.forEach((nama, i) => {
                 const node = document.createElement("div");
                 node.className = "node";
@@ -182,7 +232,7 @@
             return garisElemen.find(g => (g.i === i && g.j === j) || (g.i === j && g.j === i));
         }
 
-        async function highlightLine(i, j, warna = "aktif", durasi = 3000) {
+        async function highlightLine(i, j, warna = "aktif", durasi = 1000) {
             const g = getLine(i, j);
             if (!g) return;
             g.el.classList.add(warna);
@@ -199,6 +249,7 @@
             // Disini esensi dynamic programmingnya karna memecah submasalah lalu ada pengunaan memoization dimana kalau sudah dihitung ndak perlu di hitung ulang langsung pakai saja
             async function solve(pos, mask) {
                 if (mask === SUDAH) return jarakAntarLokasi[pos][0];
+
                 if (dp[pos][mask] !== Infinity) return dp[pos][mask];
 
                 for (let nxt = 0; nxt < n; nxt++) {
@@ -206,6 +257,7 @@
                         log(`Coba dari <b>${lokasi[pos]}</b> ke <b>${lokasi[nxt]}</b> (jarak ${jarakAntarLokasi[pos][nxt]})`);
                         await highlightLine(pos, nxt);
                         const jarakTotal = jarakAntarLokasi[pos][nxt] + await solve(nxt, mask | (1 << nxt));
+
                         if (jarakTotal < dp[pos][mask]) {
                             dp[pos][mask] = jarakTotal;
                             next[pos][mask] = nxt;
@@ -227,11 +279,11 @@
 
             for (let k = 0; k < path.length - 1; k++) {
                 const g = getLine(path[k], path[k + 1]);
-                g.el.classList.add("final");
+                if (g) g.el.classList.add("final");
             }
 
-            log("<hr><b>Jarak total terpendek:</b> " + hasil);
-            log("<b>Rute terbaik:</b> " + path.map(i => lokasi[i]).join(" → "));
+            log("<hr><b>✅ Jarak total terpendek:</b> " + hasil + "km");
+            log("<b>🚚 Rute terbaik:</b> " + path.map(i => lokasi[i]).join(" → "));
         }
 
         async function mulaiPerhitungan() {
