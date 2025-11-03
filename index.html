@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visualisasi Rute Terpendek - Dynamic Programming</title>
+    <style>
+        body {
+            display: flex;
+            gap: 20px;
+            background: #111;
+            color: #eee;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        #peta {
+            position: relative;
+            width: 600px;
+            height: 400px;
+            background: #222;
+            border-radius: 10px;
+        }
+
+        .node {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: #007bff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .label-nama {
+            position: absolute;
+            text-align: center;
+            width: 100px;
+            transform: translate(-30%, 50px);
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .garis {
+            position: absolute;
+            height: 2px;
+            background: #888;
+            transform-origin: 0 0;
+            transition: background 0.3s;
+        }
+
+        .jarak {
+            position: absolute;
+            color: #fff;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        #log {
+            flex: 1;
+            background: #1a1a1a;
+            border-radius: 10px;
+            padding: 15px;
+            overflow-y: auto;
+            height: 400px;
+            font-size: 14px;
+        }
+
+        .aktif {
+            background: orange !important;
+        }
+
+        .final {
+            background: limegreen !important;
+        }
+
+        button {
+            background: #007bff;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+
+<body style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column;">
+
+    <div style="display: flex; flex-direction: column; text-align: center;">
+        <div>
+            <button onclick="mulaiPerhitungan()">▶ Mulai Perhitungan</button>
+            <h3>Implementasi Algoritma Dynamic Programming untuk Optimasi Pencarian Rute Terpendek pada Sistem
+                Distribusi Supplier di Perusahaan XYZ</h3>
+            <div id="peta"></div>
+        </div>
+
+        <div style="margin-top: 24px;" id="log"></div>
+    </div>
+
+    <script>
+        const lokasi = ["Supplier", "Gudang A", "Gudang B", "Gudang C"];
+        const koordinat = [
+            { x: 100, y: 200 },
+            { x: 300, y: 80 },
+            { x: 500, y: 150 },
+            { x: 350, y: 300 },
+        ];
+        const jarakAntarLokasi = [
+            [0, 10, 15, 20],
+            [10, 0, 35, 25],
+            [15, 35, 0, 30],
+            [20, 25, 30, 0],
+        ];
+
+        const peta = document.getElementById("peta");
+        const logEl = document.getElementById("log");
+        let garisElemen = [];
+
+        function buatPeta() {
+            lokasi.forEach((nama, i) => {
+                const node = document.createElement("div");
+                node.className = "node";
+                node.textContent = i;
+                node.style.left = koordinat[i].x + "px";
+                node.style.top = koordinat[i].y + "px";
+                peta.appendChild(node);
+
+                const label = document.createElement("div");
+                label.className = "label-nama";
+                label.textContent = nama;
+                label.style.left = koordinat[i].x + "px";
+                label.style.top = koordinat[i].y + "px";
+                peta.appendChild(label);
+            });
+
+            for (let i = 0; i < lokasi.length; i++) {
+                for (let j = i + 1; j < lokasi.length; j++) {
+                    const x1 = koordinat[i].x + 20, y1 = koordinat[i].y + 20;
+                    const x2 = koordinat[j].x + 20, y2 = koordinat[j].y + 20;
+                    const dx = x2 - x1, dy = y2 - y1;
+                    const panjang = Math.sqrt(dx * dx + dy * dy);
+                    const sudut = Math.atan2(dy, dx) * (180 / Math.PI);
+
+                    const garis = document.createElement("div");
+                    garis.className = "garis";
+                    garis.style.width = panjang + "px";
+                    garis.style.left = x1 + "px";
+                    garis.style.top = y1 + "px";
+                    garis.style.transform = `rotate(${sudut}deg)`;
+                    peta.appendChild(garis);
+
+                    const labelJarak = document.createElement("div");
+                    labelJarak.className = "jarak";
+                    labelJarak.textContent = jarakAntarLokasi[i][j];
+                    labelJarak.style.left = (x1 + x2) / 2 + "px";
+                    labelJarak.style.top = (y1 + y2) / 2 + "px";
+                    peta.appendChild(labelJarak);
+
+                    garisElemen.push({ i, j, el: garis });
+                }
+            }
+        }
+
+        function log(teks) {
+            logEl.innerHTML += teks + "<br>";
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function getLine(i, j) {
+            return garisElemen.find(g => (g.i === i && g.j === j) || (g.i === j && g.j === i));
+        }
+
+        async function highlightLine(i, j, warna = "aktif", durasi = 3000) {
+            const g = getLine(i, j);
+            if (!g) return;
+            g.el.classList.add(warna);
+            await new Promise(r => setTimeout(r, durasi));
+            if (warna === "aktif") g.el.classList.remove(warna);
+        }
+
+        async function cariRuteTerpendek(jarakAntarLokasi) {
+            const n = jarakAntarLokasi.length;
+            const SUDAH = (1 << n) - 1;
+            const dp = Array.from({ length: n }, () => Array(1 << n).fill(Infinity));
+            const next = Array.from({ length: n }, () => Array(1 << n).fill(-1));
+
+            // Disini esensi dynamic programmingnya karna memecah submasalah lalu ada pengunaan memoization dimana kalau sudah dihitung ndak perlu di hitung ulang langsung pakai saja
+            async function solve(pos, mask) {
+                if (mask === SUDAH) return jarakAntarLokasi[pos][0];
+                if (dp[pos][mask] !== Infinity) return dp[pos][mask];
+
+                for (let nxt = 0; nxt < n; nxt++) {
+                    if ((mask & (1 << nxt)) === 0) {
+                        log(`Coba dari <b>${lokasi[pos]}</b> ke <b>${lokasi[nxt]}</b> (jarak ${jarakAntarLokasi[pos][nxt]})`);
+                        await highlightLine(pos, nxt);
+                        const jarakTotal = jarakAntarLokasi[pos][nxt] + await solve(nxt, mask | (1 << nxt));
+                        if (jarakTotal < dp[pos][mask]) {
+                            dp[pos][mask] = jarakTotal;
+                            next[pos][mask] = nxt;
+                        }
+                    }
+                }
+                return dp[pos][mask];
+            }
+
+            const hasil = await solve(0, 1);
+
+            let path = [0], pos = 0, mask = 1;
+            while (next[pos][mask] !== -1) {
+                pos = next[pos][mask];
+                path.push(pos);
+                mask |= (1 << pos);
+            }
+            path.push(0);
+            
+            for (let k = 0; k < path.length - 1; k++) {
+                const g = getLine(path[k], path[k + 1]);
+                g.el.classList.add("final");
+            }
+
+            log("<hr><b>Jarak total terpendek:</b> " + hasil);
+            log("<b>Rute terbaik:</b> " + path.map(i => lokasi[i]).join(" → "));
+        }
+
+        async function mulaiPerhitungan() {
+            logEl.innerHTML = "";
+            garisElemen.forEach(g => g.el.classList.remove("aktif", "final"));
+            await cariRuteTerpendek(jarakAntarLokasi);
+        }
+
+        buatPeta();
+    </script>
+</body>
+
+</html>
