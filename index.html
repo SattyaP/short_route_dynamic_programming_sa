@@ -2,265 +2,455 @@
 <html lang="id">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Visualisasi Rute Terpendek - Dynamic Programming</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Wizard: Visualisasi Rute Terpendek (DP)</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
     <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        html,
-        body {
-            height: 100%;
-            margin: 0;
-            background: #111;
-            color: #eee;
-            font-family: 'Segoe UI', sans-serif;
-        }
-
-        .app {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            height: calc(100vh - 80px);
-            padding: 20px;
-            align-items: stretch;
-        }
-
-        .left {
-            width: 700px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .controls {
-            text-align: center;
-        }
-
-        #peta {
-            position: relative;
-            flex: 1;
-            background: #222;
-            border-radius: 10px;
-            overflow: hidden;
-            min-height: 480px;
-        }
-
-        #log {
-            flex: 1;
-            background: #1a1a1a;
-            border-radius: 10px;
-            padding: 15px;
-            overflow-y: auto;
-            font-size: 14px;
+        .garis {
+            position: absolute;
+            height: 3px;
+            background: #9ca3af;
+            transform-origin: 0 0;
+            transition: background 0.25s, height 0.25s;
+            z-index: 10;
         }
 
         .node {
             position: absolute;
-            width: 40px;
-            height: 40px;
-            background: #007bff;
-            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            border-radius: 9999px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-weight: bold;
-            transition: background 0.3s;
-            z-index: 99999999;
+            color: #fff;
+            font-weight: 700;
+            z-index: 30;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
         }
 
         .label-nama {
             position: absolute;
-            text-align: center;
+            transform: translate(-30%, 52px);
             width: 120px;
-            transform: translate(-30%, 50px);
+            text-align: center;
             color: #fff;
-            font-size: 14px;
-        }
-
-        .garis {
-            position: absolute;
-            height: 2px;
-            background: #888;
-            transform-origin: 0 0;
-            transition: background 0.3s;
+            z-index: 30;
         }
 
         .jarak {
             position: absolute;
+            background: rgba(0, 0, 0, 0.6);
             color: #fff;
-            font-size: 13px;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 2px 4px;
-            border-radius: 4px;
-        }
-
-        .aktif {
-            background: orange !important;
-        }
-
-        .final {
-            background: limegreen !important;
-        }
-
-        button {
-            background: #007bff;
-            border: none;
-            color: white;
-            padding: 8px 12px;
-            margin-bottom: 10px;
+            padding: 2px 6px;
             border-radius: 6px;
-            cursor: pointer;
+            font-size: 12px;
+            z-index: 20;
         }
 
-        button:hover {
-            background: #0056b3;
+        .garis.aktif {
+            background: #fb923c;
+            height: 5px;
         }
 
-        h3 {
-            margin: 8px 0 0 0;
-            font-size: 16px;
-            line-height: 1.2;
-            color: #eee;
+        .garis.final {
+            background: #34d399;
+            height: 5px;
         }
 
-        #log b {
-            color: #ffd;
+        #log::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
         }
 
-        hr {
-            border: none;
-            border-top: 1px solid #333;
-            margin: 8px 0;
+        #log::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 999px;
         }
     </style>
 </head>
 
-<body>
-    <div style="margin-top: 24px; text-align: center;">
-        <button onclick="mulaiPerhitungan()">▶ Mulai Perhitungan</button>
-        <h3>Implementasi Algoritma Dynamic Programming untuk Optimasi Pencarian Rute Terpendek pada Sistem
-            Distribusi Supplier di Perusahaan XYZ</h3>
-    </divs>
-    <div class="app">
-        <div class="left">
+<body class="bg-slate-900 text-slate-100 min-h-screen p-6">
 
-            <div id="peta"></div>
+    <div class="mx-auto">
+        <h1 class="text-2xl font-semibold mb-4 ">Visualisasi Rute Terpendek — Wizard (Dynamic Programming)</h1>
+
+        <div class="grid grid-cols-12 gap-6">
+            <div class="col-span-5 bg-slate-800 rounded-lg p-4 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex gap-3">
+                        <div id="judulStep" class="text-lg font-semibold">Tambah Lokasi</div>
+                        <div id="stepIndicator" class="text-sm text-slate-300">Step 1 dari 3</div>
+                    </div>
+                </div>
+
+                <div id="step1">
+                    <form id="formTambah" class="space-y-3">
+                        <div>
+                            <label class="text-sm">Nama Lokasi</label>
+                            <input id="inputNama" class="w-full mt-1 p-2 rounded bg-slate-700 text-white" required
+                                placeholder="Contoh: Supplier" />
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-sm">Koordinat X (px)</label>
+                                <input id="inputX" type="number" class="w-full mt-1 p-2 rounded bg-slate-700 text-white"
+                                    required placeholder="Mis: 100" />
+                            </div>
+                            <div>
+                                <label class="text-sm">Koordinat Y (px)</label>
+                                <input id="inputY" type="number" class="w-full mt-1 p-2 rounded bg-slate-700 text-white"
+                                    required placeholder="Mis: 200" />
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button type="submit" class="bg-blue-600 px-3 py-2 rounded hover:bg-blue-500">Tambah
+                                Lokasi</button>
+                            <button type="button" id="resetLokasi"
+                                class="bg-rose-600 px-3 py-2 rounded hover:bg-rose-500">Kosongkan Semua</button>
+                        </div>
+                    </form>
+
+                    <div class="mt-2">
+                        <div class="text-sm text-slate-300 mb-2">Daftar lokasi (urutan index):</div>
+                        <ul id="daftarLokasi" class="space-y-1 text-sm"></ul>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-700">
+                        <button id="keStep2"
+                            class="mt-3 w-full bg-green-600 py-2 rounded hover:bg-green-500 disabled:opacity-50"
+                            disabled>Lanjut ke Step 2: Isi Jarak Antar Lokasi</button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Input jarak -->
+                <div id="step2" class="hidden">
+                    <div class="text-sm text-slate-300">Isi jarak antar lokasi (km). Mengisi satu sisi otomatis mengisi
+                        sisi simetris.</div>
+                    <div class="overflow-auto mt-3 p-2 bg-slate-900 rounded">
+                        <table id="tabelJarak" class="w-full table-fixed text-sm">
+                            <!-- dibangun dinamis -->
+                        </table>
+                    </div>
+                    <div class="flex gap-2 mt-3">
+                        <button id="kembaliStep1"
+                            class="flex-1 bg-slate-600 py-2 rounded hover:bg-slate-500">Kembali</button>
+                        <button id="keStep3"
+                            class="flex-1 bg-green-600 py-2 rounded hover:bg-green-500 disabled:opacity-50"
+                            disabled>Lanjut ke Step 3: Visual & Hitung</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Visual & Run -->
+                <div id="step3" class="hidden">
+                    <div class="text-sm text-slate-300">Step 3: Jalankan perhitungan dan lihat visualisasi serta log
+                        proses DP.</div>
+
+                    <div class="mt-3 grid grid-cols-2 gap-2">
+                        <button id="btnJalankan" class="bg-indigo-600 py-2 rounded hover:bg-indigo-500">Hitung &
+                            Visualisasi</button>
+                        <button id="btnResetAll" class="bg-rose-600 py-2 rounded hover:bg-rose-500">Reset Semua</button>
+                    </div>
+
+                    <div class="mt-3 text-sm text-slate-400">
+                        Tips: gunakan tombol <span class="px-2 py-1 bg-slate-700 rounded">Reset Semua</span> untuk mulai
+                        dari awal.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: peta + log -->
+            <div class="col-span-7 space-y-4">
+                <div class="bg-slate-800 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="font-semibold">Peta (visual)</div>
+                        <div class="text-sm text-slate-400">Nodes: <span id="countNodes">0</span></div>
+                    </div>
+
+                    <div id="peta" class="relative bg-slate-900 rounded h-96 overflow-hidden">
+                    </div>
+                </div>
+
+                <div class="bg-slate-800 rounded-lg p-4 flex gap-4">
+                    <div class="flex-1">
+                        <div class="text-sm text-slate-300 mb-2">Log Proses</div>
+                        <div id="log" class="h-60 overflow-auto bg-slate-900 p-3 rounded text-sm"></div>
+                    </div>
+
+                    <div class="w-64">
+                        <div class="text-sm text-slate-300 mb-2">Ringkasan</div>
+                        <div id="ringkasan" class="bg-slate-900 p-3 rounded text-sm min-h-[150px]"></div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div id="log"></div>
     </div>
 
     <script>
-        const lokasi = ["Supplier", "Gudang A", "Gudang B", "Gudang C", "Gudang D"];
-        const koordinat = [
-            { x: 100, y: 200 },
-            { x: 300, y: 80 },
-            { x: 500, y: 150 },
-            { x: 350, y: 300 },
-            { x: 150, y: 350 }
-        ];
-        const jarakAntarLokasi = [
-            [0, 10, 15, 20, 18],
-            [10, 0, 35, 25, 17],
-            [15, 35, 0, 30, 20],
-            [20, 25, 30, 0, 24],
-            [18, 17, 20, 24, 0]
-        ];
+        let stateLokasi = []; // {nama, x, y}
+        let stateJarak = [];  // matriks NxN
+        let garisElemen = []; // {i,j,el, labelEl}
 
-        const peta = document.getElementById("peta");
-        const logEl = document.getElementById("log");
-        let garisElemen = [];
+        /* ---- DOM refs ---- */
+        const formTambah = document.getElementById('formTambah');
+        const inputNama = document.getElementById('inputNama');
+        const inputX = document.getElementById('inputX');
+        const inputY = document.getElementById('inputY');
+        const daftarLokasi = document.getElementById('daftarLokasi');
+        const keStep2 = document.getElementById('keStep2');
+        const stepIndicator = document.getElementById('stepIndicator');
+        const judulStep = document.getElementById('judulStep');
+        const step1 = document.getElementById('step1');
+        const step2 = document.getElementById('step2');
+        const step3 = document.getElementById('step3');
+        const tabelJarak = document.getElementById('tabelJarak');
+        const keStep3 = document.getElementById('keStep3');
+        const kembaliStep1 = document.getElementById('kembaliStep1');
+        const btnJalankan = document.getElementById('btnJalankan');
+        const btnResetAll = document.getElementById('btnResetAll');
+        const peta = document.getElementById('peta');
+        const logEl = document.getElementById('log');
+        const ringkasan = document.getElementById('ringkasan');
+        const countNodes = document.getElementById('countNodes');
+        const resetLokasi = document.getElementById('resetLokasi');
 
-        function buatPeta() {
-            peta.innerHTML = "";
-            garisElemen = [];
+        /* ========== helpers ========== */
+        function setStep(step) {
+            stepIndicator.textContent = `Step ${step} dari 3`;
+            if (step === 1) { step1.classList.remove('hidden'); step2.classList.add('hidden'); step3.classList.add('hidden'); judulStep.textContent = 'Tambah Lokasi'; }
+            if (step === 2) { step1.classList.add('hidden'); step2.classList.remove('hidden'); step3.classList.add('hidden'); judulStep.textContent = 'Isi Jarak Antar Lokasi'; }
+            if (step === 3) { step1.classList.add('hidden'); step2.classList.add('hidden'); step3.classList.remove('hidden'); judulStep.textContent = 'Visual & Perhitungan'; }
+        }
 
-            lokasi.forEach((nama, i) => {
-                const node = document.createElement("div");
-                node.className = "node";
-                node.textContent = i;
-                node.style.left = koordinat[i].x + "px";
-                node.style.top = koordinat[i].y + "px";
-                peta.appendChild(node);
+        /* clear all */
+        function resetAll() {
+            stateLokasi = []; stateJarak = []; garisElemen = [];
+            daftarLokasi.innerHTML = '';
+            tabelJarak.innerHTML = '';
+            peta.innerHTML = '';
+            logEl.innerHTML = '';
+            ringkasan.innerHTML = '';
+            countNodes.textContent = '0';
+            keStep2.disabled = true;
+            keStep3.disabled = true;
+            setStep(1);
+        }
 
-                const label = document.createElement("div");
-                label.className = "label-nama";
-                label.textContent = nama;
-                label.style.left = koordinat[i].x + "px";
-                label.style.top = koordinat[i].y + "px";
-                peta.appendChild(label);
+        /* render daftar lokasi */
+        function renderDaftarLokasi() {
+            daftarLokasi.innerHTML = '';
+            stateLokasi.forEach((l, idx) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-slate-700 px-3 py-1 rounded';
+                li.innerHTML = `<div><b>[${idx}]</b> ${l.nama} &nbsp; <span class="text-xs text-slate-300">(${l.x}, ${l.y})</span></div>
+                    <div class="flex gap-2">
+                      <button data-idx="${idx}" class="hapusLokasi text-xs bg-rose-600 px-2 py-1 rounded">Hapus</button>
+                    </div>`;
+                daftarLokasi.appendChild(li);
             });
+            document.querySelectorAll('.hapusLokasi').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = Number(e.target.dataset.idx);
+                    stateLokasi.splice(idx, 1);
+                    // rebuild jarak if exists
+                    rebuildMatrixFromLocations();
+                    renderDaftarLokasi();
+                    keStep2.disabled = stateLokasi.length < 2;
+                });
+            });
+            countNodes.textContent = String(stateLokasi.length);
+        }
 
-            for (let i = 0; i < lokasi.length; i++) {
-                for (let j = i + 1; j < lokasi.length; j++) {
-                    const x1 = koordinat[i].x + 20, y1 = koordinat[i].y + 20;
-                    const x2 = koordinat[j].x + 20, y2 = koordinat[j].y + 20;
-                    const dx = x2 - x1, dy = y2 - y1;
-                    const panjang = Math.sqrt(dx * dx + dy * dy);
-                    const sudut = Math.atan2(dy, dx) * (180 / Math.PI);
-
-                    const garis = document.createElement("div");
-                    garis.className = "garis";
-                    garis.style.width = panjang + "px";
-                    garis.style.left = x1 + "px";
-                    garis.style.top = y1 + "px";
-                    garis.style.transform = `rotate(${sudut}deg)`;
-                    peta.appendChild(garis);
-
-                    const labelJarak = document.createElement("div");
-                    labelJarak.className = "jarak";
-                    labelJarak.textContent = jarakAntarLokasi[i][j];
-                    labelJarak.style.left = (x1 + x2) / 2 + "px";
-                    labelJarak.style.top = (y1 + y2) / 2 + "px";
-                    peta.appendChild(labelJarak);
-
-                    garisElemen.push({ i, j, el: garis });
+        /* rebuild matrix ukuran NxN (preserve existing values where possible) */
+        function rebuildMatrixFromLocations() {
+            const n = stateLokasi.length;
+            const prev = stateJarak;
+            stateJarak = Array.from({ length: n }, () => Array(n).fill(0));
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    if (i === j) stateJarak[i][j] = 0;
+                    else if (prev && prev[i] && prev[i][j] !== undefined) stateJarak[i][j] = prev[i][j];
+                    else stateJarak[i][j] = '';
                 }
             }
         }
 
-        function log(teks) {
-            logEl.innerHTML += teks + "<br>";
-            logEl.scrollTop = logEl.scrollHeight;
+        /* build table jarak input */
+        function buildTabelJarak() {
+            tabelJarak.innerHTML = '';
+            const n = stateLokasi.length;
+            if (n < 2) {
+                tabelJarak.innerHTML = `<div class="text-sm text-slate-400 p-2">Tambahkan minimal 2 lokasi untuk mengisi jarak.</div>`;
+                return;
+            }
+            // header
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = `<th class="p-2"></th>` + stateLokasi.map((l, idx) => `<th class="p-2 text-left">[${idx}] ${l.nama}</th>`).join('');
+            thead.appendChild(headerRow);
+            tabelJarak.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+            for (let i = 0; i < n; i++) {
+                const row = document.createElement('tr');
+                let cols = `<td class="p-2 font-semibold">[${i}] ${stateLokasi[i].nama}</td>`;
+                for (let j = 0; j < n; j++) {
+                    if (i === j) {
+                        cols += `<td class="p-2"><input disabled class="w-20 p-1 rounded bg-slate-700 text-white text-center" value="0" /></td>`;
+                    } else {
+                        const val = stateJarak[i][j] !== '' ? stateJarak[i][j] : '';
+                        cols += `<td class="p-2"><input data-i="${i}" data-j="${j}" class="w-20 p-1 rounded bg-slate-700 text-white text-center jarakInput" value="${val}" /></td>`;
+                    }
+                }
+                row.innerHTML = cols;
+                tbody.appendChild(row);
+            }
+            tabelJarak.appendChild(tbody);
+
+            // attach listeners on inputs (symmetric fill)
+            document.querySelectorAll('.jarakInput').forEach(inp => {
+                inp.addEventListener('input', e => {
+                    const i = Number(e.target.dataset.i);
+                    const j = Number(e.target.dataset.j);
+                    const v = e.target.value.trim();
+                    const num = v === '' ? '' : Number(v);
+                    if (v !== '' && (isNaN(num) || num < 0)) {
+                        e.target.classList.add('border', 'border-rose-500');
+                        keStep3.disabled = true;
+                        return;
+                    } else {
+                        e.target.classList.remove('border', 'border-rose-500');
+                    }
+                    // set both sides
+                    stateJarak[i][j] = v === '' ? '' : num;
+                    stateJarak[j][i] = v === '' ? '' : num;
+                    // update the mirrored input element
+                    const mirror = document.querySelector(`input[data-i="${j}"][data-j="${i}"]`);
+                    if (mirror) mirror.value = v;
+                    // enable keStep3 only if all non-diagonal entries are numbers
+                    const ready = checkAllDistancesFilled();
+                    keStep3.disabled = !ready;
+                });
+            });
         }
 
+        /* cek semua dist terisi valid */
+        function checkAllDistancesFilled() {
+            const n = stateJarak.length;
+            if (n < 2) return false;
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    if (i === j) continue;
+                    if (stateJarak[i][j] === '' || stateJarak[i][j] === undefined || isNaN(Number(stateJarak[i][j]))) return false;
+                }
+            }
+            return true;
+        }
+
+        /* ========== Peta visual (DOM) ========== */
+        function buatPetaVisual() {
+            peta.innerHTML = '';
+            garisElemen = [];
+            const n = stateLokasi.length;
+            // buat garis semua pasangan dan label jarak
+            for (let i = 0; i < n; i++) {
+                for (let j = i + 1; j < n; j++) {
+                    const x1 = stateLokasi[i].x + 22;
+                    const y1 = stateLokasi[i].y + 22;
+                    const x2 = stateLokasi[j].x + 22;
+                    const y2 = stateLokasi[j].y + 22;
+                    const dx = x2 - x1, dy = y2 - y1;
+                    const panjang = Math.sqrt(dx * dx + dy * dy);
+                    const sudut = Math.atan2(dy, dx) * 180 / Math.PI;
+
+                    const garis = document.createElement('div');
+                    garis.className = 'garis';
+                    garis.style.width = `${panjang}px`;
+                    garis.style.left = `${x1}px`;
+                    garis.style.top = `${y1}px`;
+                    garis.style.transform = `rotate(${sudut}deg)`;
+                    peta.appendChild(garis);
+
+                    const label = document.createElement('div');
+                    label.className = 'jarak';
+                    label.style.left = `${(x1 + x2) / 2}px`;
+                    label.style.top = `${(y1 + y2) / 2}px`;
+                    label.textContent = stateJarak[i][j] !== '' ? stateJarak[i][j] : '-';
+                    peta.appendChild(label);
+
+                    garisElemen.push({ i, j, el: garis, labelEl: label });
+                }
+            }
+
+            // buat node + nama
+            for (let i = 0; i < n; i++) {
+                const nd = document.createElement('div');
+                nd.className = 'node bg-blue-600';
+                nd.style.left = `${stateLokasi[i].x}px`;
+                nd.style.top = `${stateLokasi[i].y}px`;
+                nd.textContent = i;
+                peta.appendChild(nd);
+
+                const label = document.createElement('div');
+                label.className = 'label-nama';
+                label.style.left = `${stateLokasi[i].x}px`;
+                label.style.top = `${stateLokasi[i].y}px`;
+                label.textContent = stateLokasi[i].nama;
+                peta.appendChild(label);
+            }
+        }
+
+        /* utility: getLine */
         function getLine(i, j) {
             return garisElemen.find(g => (g.i === i && g.j === j) || (g.i === j && g.j === i));
         }
 
-        async function highlightLine(i, j, warna = "aktif", durasi = 1000) {
+        /* highlight sementara */
+        async function highlightLine(i, j, warna = 'aktif', durasi = 450) {
             const g = getLine(i, j);
             if (!g) return;
             g.el.classList.add(warna);
             await new Promise(r => setTimeout(r, durasi));
-            if (warna === "aktif") g.el.classList.remove(warna);
+            if (warna === 'aktif') g.el.classList.remove(warna);
         }
 
-        async function cariRuteTerpendek(jarakAntarLokasi) {
-            const n = jarakAntarLokasi.length;
+        /* ========== Algoritma DP + visualisasi langkah ========== */
+        async function jalankanDP_visual() {
+            logEl.innerHTML = '';
+            ringkasan.innerHTML = '';
+            // hilangkan kelas dari run sebelumnya
+            garisElemen.forEach(g => g.el.classList.remove('aktif', 'final'));
+
+            const n = stateJarak.length;
             const SUDAH = (1 << n) - 1;
             const dp = Array.from({ length: n }, () => Array(1 << n).fill(Infinity));
             const next = Array.from({ length: n }, () => Array(1 << n).fill(-1));
 
-            // Disini esensi dynamic programmingnya karna memecah submasalah lalu ada pengunaan memoization dimana kalau sudah dihitung ndak perlu di hitung ulang langsung pakai saja
-            async function solve(pos, mask) {
-                if (mask === SUDAH) return jarakAntarLokasi[pos][0];
+            function logHTML(html) {
+                logEl.innerHTML += html + '<br>';
+                logEl.scrollTop = logEl.scrollHeight;
+            }
 
+            async function solve(pos, mask) {
+                if (mask === SUDAH) return stateJarak[pos][0]; // kembali ke supplier
                 if (dp[pos][mask] !== Infinity) return dp[pos][mask];
 
                 for (let nxt = 0; nxt < n; nxt++) {
                     if ((mask & (1 << nxt)) === 0) {
-                        log(`Coba dari <b>${lokasi[pos]}</b> ke <b>${lokasi[nxt]}</b> (jarak ${jarakAntarLokasi[pos][nxt]})`);
-                        await highlightLine(pos, nxt);
-                        const jarakTotal = jarakAntarLokasi[pos][nxt] + await solve(nxt, mask | (1 << nxt));
+                        logHTML(`<span class="text-sm">Coba dari <b>${stateLokasi[pos].nama}</b> ke <b>${stateLokasi[nxt].nama}</b> (jarak ${stateJarak[pos][nxt]})</span>`);
+                        await highlightLine(pos, nxt, 'aktif', 350);
 
+                        const jarakTotal = Number(stateJarak[pos][nxt]) + await solve(nxt, mask | (1 << nxt));
                         if (jarakTotal < dp[pos][mask]) {
                             dp[pos][mask] = jarakTotal;
                             next[pos][mask] = nxt;
+                            // tampilkan update memoization singkat
+                            logHTML(`<span class="text-xs text-slate-300">→ update dp[${pos}][${mask}] = ${jarakTotal}</span>`);
                         }
                     }
                 }
@@ -269,6 +459,7 @@
 
             const hasil = await solve(0, 1);
 
+            // rekonstruksi path
             let path = [0], pos = 0, mask = 1;
             while (next[pos][mask] !== -1) {
                 pos = next[pos][mask];
@@ -277,22 +468,79 @@
             }
             path.push(0);
 
+            // beri tanda final
             for (let k = 0; k < path.length - 1; k++) {
                 const g = getLine(path[k], path[k + 1]);
-                if (g) g.el.classList.add("final");
+                if (g) g.el.classList.add('final');
             }
 
-            log("<hr><b>✅ Jarak total terpendek:</b> " + hasil + "km");
-            log("<b>🚚 Rute terbaik:</b> " + path.map(i => lokasi[i]).join(" → "));
+            // ringkasan
+            ringkasan.innerHTML = `<div class="text-sm"><b>Jarak total terpendek:</b> ${hasil} km</div>
+                        <div class="text-sm mt-2"><b>Rute terbaik:</b> ${path.map(i => stateLokasi[i].nama).join(' → ')}</div>`;
+
+            logHTML('<hr>');
+            logHTML(`<div style="font-size:18px"><b>✅ Selesai — total ${hasil} km</b></div>`);
         }
 
-        async function mulaiPerhitungan() {
-            logEl.innerHTML = "";
-            garisElemen.forEach(g => g.el.classList.remove("aktif", "final"));
-            await cariRuteTerpendek(jarakAntarLokasi);
-        }
+        /* ========== Event handlers ========== */
 
-        buatPeta();
+        /* tambah lokasi */
+        formTambah.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const nama = inputNama.value.trim();
+            const x = Number(inputX.value);
+            const y = Number(inputY.value);
+            if (!nama || isNaN(x) || isNaN(y)) return alert('Isi nama dan koordinat dengan benar.');
+            stateLokasi.push({ nama, x, y });
+            rebuildMatrixFromLocations();
+            renderDaftarLokasi();
+            inputNama.value = ''; inputX.value = ''; inputY.value = '';
+            keStep2.disabled = stateLokasi.length < 2;
+        });
+
+        /* reset lokasi button */
+        resetLokasi.addEventListener('click', (e) => {
+            if (!confirm('Kosongkan semua lokasi?')) return;
+            resetAll();
+        });
+
+        /* go to step2 */
+        keStep2.addEventListener('click', () => {
+            buildTabelJarak();
+            setStep(2);
+        });
+
+        /* back to step1 */
+        kembaliStep1.addEventListener('click', () => {
+            setStep(1);
+        });
+
+        /* go to step3 */
+        keStep3.addEventListener('click', () => {
+            // build peta visual untuk preview
+            buatPetaVisual();
+            setStep(3);
+        });
+
+        /* jalankan DP & visual */
+        btnJalankan.addEventListener('click', async () => {
+            // ensure valid
+            if (!checkAllDistancesFilled()) return alert('Isi semua nilai jarak terlebih dahulu.');
+            // build visual
+            buatPetaVisual();
+            await jalankanDP_visual();
+        });
+
+        /* full reset */
+        btnResetAll.addEventListener('click', () => {
+            if (!confirm('Reset semua data?')) return;
+            resetAll();
+        });
+
+        /* inisialisasi */
+        resetAll();
+        setStep(1);
+
     </script>
 </body>
 
