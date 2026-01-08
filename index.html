@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Visualisasi Rute Terpendek (DP) | Kelompok 2</title>
+    <title>Wizard: Visualisasi Rute Terpendek (DP)</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -76,7 +76,7 @@
 <body class="bg-slate-900 text-slate-100 min-h-screen p-6">
 
     <div class="mx-auto">
-        <h1 class="text-2xl font-semibold mb-4 ">Visualisasi Rute Terpendek (Dynamic Programming)</h1>
+        <h1 class="text-2xl font-semibold mb-4 ">Visualisasi Rute Terpendek — Wizard (Dynamic Programming)</h1>
 
         <div class="grid grid-cols-12 gap-6">
             <div class="col-span-5 bg-slate-800 rounded-lg p-4 space-y-4">
@@ -171,7 +171,7 @@
                         <div class="text-sm text-slate-400">Nodes: <span id="countNodes">0</span></div>
                     </div>
 
-                    <div id="peta" class="relative bg-slate-900 rounded h-96 overflow-hidden">
+                    <div id="peta" class="relative bg-slate-900 rounded h-[calc(100vh-500px)] overflow-hidden">
                     </div>
                 </div>
 
@@ -270,7 +270,11 @@
         function rebuildMatrixFromLocations() {
             const n = stateLokasi.length;
             const prev = stateJarak;
-            stateJarak = Array.from({ length: n }, () => Array(n).fill(0));
+            stateJarak = Array.from({ length: n }, () => Array(n).fill(null));
+            for (let i = 0; i < n; i++) {
+                stateJarak[i][i] = 0;
+            }
+
             for (let i = 0; i < n; i++) {
                 for (let j = 0; j < n; j++) {
                     if (i === j) stateJarak[i][j] = 0;
@@ -334,7 +338,7 @@
                     if (mirror) mirror.value = v;
                     // enable keStep3 only if all non-diagonal entries are numbers
                     const ready = checkAllDistancesFilled();
-                    keStep3.disabled = !ready;
+                    keStep3.disabled = false;
                 });
             });
         }
@@ -342,13 +346,25 @@
         /* cek semua dist terisi valid */
         function checkAllDistancesFilled() {
             const n = stateJarak.length;
-            if (n < 2) return false;
+
             for (let i = 0; i < n; i++) {
+                let punyaKoneksi = false;
+
                 for (let j = 0; j < n; j++) {
                     if (i === j) continue;
-                    if (stateJarak[i][j] === '' || stateJarak[i][j] === undefined || isNaN(Number(stateJarak[i][j]))) return false;
+
+                    const v = stateJarak[i][j];
+
+                    if (v !== '' && v !== null && !isNaN(Number(v))) {
+                        punyaKoneksi = true;
+                    }
+                }
+
+                if (!punyaKoneksi && i !== 0) {
+                    continue;
                 }
             }
+
             return true;
         }
 
@@ -360,6 +376,14 @@
             // buat garis semua pasangan dan label jarak
             for (let i = 0; i < n; i++) {
                 for (let j = i + 1; j < n; j++) {
+                    if (stateJarak[i][j] === null) continue;
+
+                    if (
+                        stateJarak[i][j] === '' ||
+                        stateJarak[i][j] === null ||
+                        isNaN(stateJarak[i][j])
+                    ) continue;
+
                     const x1 = stateLokasi[i].x + 22;
                     const y1 = stateLokasi[i].y + 22;
                     const x2 = stateLokasi[j].x + 22;
@@ -390,7 +414,14 @@
             // buat node + nama
             for (let i = 0; i < n; i++) {
                 const nd = document.createElement('div');
-                nd.className = 'node bg-blue-600';
+                const isIsolated = stateJarak[i].every(
+                    (v, idx) => i !== idx && (v === '' || v === null)
+                );
+
+                nd.className = isIsolated
+                    ? 'node bg-slate-500 opacity-60'
+                    : 'node bg-blue-600';
+
                 nd.style.left = `${stateLokasi[i].x}px`;
                 nd.style.top = `${stateLokasi[i].y}px`;
                 nd.textContent = i;
@@ -419,6 +450,30 @@
             if (warna === 'aktif') g.el.classList.remove(warna);
         }
 
+        function getNodeAktif() {
+            const aktif = [];
+
+            for (let i = 0; i < stateJarak.length; i++) {
+                let punyaEdge = false;
+
+                for (let j = 0; j < stateJarak.length; j++) {
+                    if (i === j) continue;
+
+                    if (
+                        stateJarak[i][j] !== '' &&
+                        stateJarak[i][j] !== null &&
+                        !isNaN(stateJarak[i][j])
+                    ) {
+                        punyaEdge = true;
+                    }
+                }
+
+                if (punyaEdge || i === 0) aktif.push(i);
+            }
+
+            return aktif;
+        }
+
         /* ========== Algoritma DP + visualisasi langkah ========== */
         async function jalankanDP_visual() {
             logEl.innerHTML = '';
@@ -426,8 +481,18 @@
             // hilangkan kelas dari run sebelumnya
             garisElemen.forEach(g => g.el.classList.remove('aktif', 'final'));
 
-            const n = stateJarak.length;
+            const nodeAktif = getNodeAktif();
+            const idxMap = {};
+            const revMap = {};
+
+            nodeAktif.forEach((v, i) => {
+                idxMap[i] = v;
+                revMap[v] = i;
+            });
+
+            const n = nodeAktif.length;
             const SUDAH = (1 << n) - 1;
+
             const dp = Array.from({ length: n }, () => Array(1 << n).fill(Infinity));
             const next = Array.from({ length: n }, () => Array(1 << n).fill(-1));
 
@@ -437,15 +502,37 @@
             }
 
             async function solve(pos, mask) {
-                if (mask === SUDAH) return stateJarak[pos][0]; // kembali ke supplier
+                if (mask === SUDAH) {
+                    const back = stateJarak[idxMap[pos]][0];
+                    return (back === '' || isNaN(back)) ? Infinity : back;
+                } // kembali ke supplier
+
                 if (dp[pos][mask] !== Infinity) return dp[pos][mask];
 
                 for (let nxt = 0; nxt < n; nxt++) {
                     if ((mask & (1 << nxt)) === 0) {
-                        logHTML(`<span class="text-sm">Coba dari <b>${stateLokasi[pos].nama}</b> ke <b>${stateLokasi[nxt].nama}</b> (jarak ${stateJarak[pos][nxt]})</span>`);
-                        await highlightLine(pos, nxt, 'aktif', 350);
+                        const realPos = idxMap[pos];
+                        const realNext = idxMap[nxt];
 
-                        const jarakTotal = Number(stateJarak[pos][nxt]) + await solve(nxt, mask | (1 << nxt));
+                        logHTML(`<span class="text-sm">
+                            Coba dari <b>${stateLokasi[realPos].nama}</b>
+                            ke <b>${stateLokasi[realNext].nama}</b>
+                            (jarak ${stateJarak[realPos][realNext]})
+                            </span>`);
+
+                        await highlightLine(realPos, realNext, 'aktif', 350);
+
+                        if (stateJarak[pos][nxt] === null) continue;
+
+                        const jarakEdge = stateJarak[realPos][realNext];
+
+                        if (
+                            jarakEdge === '' ||
+                            jarakEdge === null ||
+                            isNaN(jarakEdge)
+                        ) continue;
+
+                        const jarakTotal = jarakEdge + await solve(nxt, mask | (1 << nxt));
                         if (jarakTotal < dp[pos][mask]) {
                             dp[pos][mask] = jarakTotal;
                             next[pos][mask] = nxt;
@@ -459,24 +546,40 @@
 
             const hasil = await solve(0, 1);
 
-            // rekonstruksi path
-            let path = [0], pos = 0, mask = 1;
-            while (next[pos][mask] !== -1) {
-                pos = next[pos][mask];
-                path.push(pos);
-                mask |= (1 << pos);
+            if (hasil === Infinity) {
+                ringkasan.innerHTML = `
+                    <div class="text-rose-400 text-sm font-semibold">
+                        ❌ Tidak ada rute yang menghubungkan semua lokasi
+                    </div>`;
+                return;
             }
-            path.push(0);
+
+            // rekonstruksi path
+            let pathAsli = [0]; // supplier
+            let pos = 0;
+            let mask = 1;
+
+            while (next[pos][mask] !== -1) {
+                const nxt = next[pos][mask];
+                const nodeAsli = idxMap[nxt];
+
+                pathAsli.push(nodeAsli);
+
+                mask |= (1 << nxt);
+                pos = nxt;
+            }
+
+            pathAsli.push(0); // kembali ke supplier
 
             // beri tanda final
-            for (let k = 0; k < path.length - 1; k++) {
-                const g = getLine(path[k], path[k + 1]);
+            for (let k = 0; k < pathAsli.length - 1; k++) {
+                const g = getLine(pathAsli[k], pathAsli[k + 1]);
                 if (g) g.el.classList.add('final');
             }
 
             // ringkasan
             ringkasan.innerHTML = `<div class="text-sm"><b>Jarak total terpendek:</b> ${hasil} km</div>
-                        <div class="text-sm mt-2"><b>Rute terbaik:</b> ${path.map(i => stateLokasi[i].nama).join(' → ')}</div>`;
+                        <div class="text-sm mt-2"><b>Rute terbaik:</b> ${pathAsli.map(i => stateLokasi[i].nama).join(' → ')}</div>`;
 
             logHTML('<hr>');
             logHTML(`<div style="font-size:18px"><b>✅ Selesai — total ${hasil} km</b></div>`);
@@ -496,6 +599,8 @@
             renderDaftarLokasi();
             inputNama.value = ''; inputX.value = ''; inputY.value = '';
             keStep2.disabled = stateLokasi.length < 2;
+
+            inputNama.focus();
         });
 
         /* reset lokasi button */
@@ -540,6 +645,33 @@
         /* inisialisasi */
         resetAll();
         setStep(1);
+
+        function isiTest() {
+            const lokasi = [
+                { nama: 'Supplier', x: 220, y: 160 },
+                { nama: 'Gudang A', x: 420, y: 80 },
+                { nama: 'Gudang B', x: 620, y: 180 },
+                { nama: 'Gudang C', x: 460, y: 340 },
+                { nama: 'Gudang D', x: 180, y: 360 },
+                { nama: 'Gudang E', x: 260, y: 260 }
+            ];
+
+            const jarak = [
+                [0, 10, 15, 20, '', 12],
+                [10, 0, 35, 25, '', 18],
+                [15, 35, 0, 30, '', 22],
+                [20, 25, 30, 0, '', 14],
+                ['', '', '', '', 0, ''],
+                [12, 18, 22, 14, '', 0]
+            ];
+
+            stateLokasi = lokasi;
+            stateJarak = jarak;
+            renderDaftarLokasi();
+            keStep2.disabled = stateLokasi.length < 2;
+        }
+
+        isiTest();
 
     </script>
 </body>
